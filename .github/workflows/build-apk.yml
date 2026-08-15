@@ -1,10 +1,10 @@
 name: Build Arabic Alphabet Game APK
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,123 +13,289 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Find and extract game ZIP
+        shell: bash
         run: |
-          ZIP_FILE=$(find . -maxdepth 2 -type f -name "*.zip" | head -n 1)
+          set -e
+
+          ZIP_FILE=$(find "$GITHUB_WORKSPACE" -maxdepth 2 -type f -iname "*.zip" | head -n 1)
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "No ZIP file found"
+            echo "ERROR: No ZIP file found."
             exit 1
           fi
 
-          echo "Found ZIP: $ZIP_FILE"
+          echo "Using ZIP: $ZIP_FILE"
 
-          mkdir -p game
-          unzip -q "$ZIP_FILE" -d game
+          mkdir -p "$GITHUB_WORKSPACE/game-source"
+
+          unzip -o "$ZIP_FILE" -d "$GITHUB_WORKSPACE/game-source"
+
+          echo "ZIP extracted successfully."
 
       - name: Find HTML file
+        shell: bash
         run: |
-          HTML_FILE=$(find game -type f -iname "index.html" | head -n 1)
+          set -e
+
+          HTML_FILE=$(find "$GITHUB_WORKSPACE/game-source" -type f \( -iname "index.html" -o -iname "*.html" \) | head -n 1)
 
           if [ -z "$HTML_FILE" ]; then
-            echo "index.html not found"
-            echo "Files found:"
-            find game -type f
+            echo "ERROR: No HTML file found inside ZIP."
             exit 1
           fi
 
-          echo "HTML file found: $HTML_FILE"
+          echo "HTML file found:"
+          echo "$HTML_FILE"
+
           echo "HTML_FILE=$HTML_FILE" >> "$GITHUB_ENV"
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+      - name: Setup Java 17
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: "8.9"
+          gradle-version: '8.9'
 
       - name: Create Android project
+        shell: bash
         run: |
-          mkdir -p android/app/src/main/java/com/yarub/arabicalphabet
-          mkdir -p android/app/src/main/assets
-          mkdir -p android/app/src/main/res/values
+          set -e
+
+          cd "$GITHUB_WORKSPACE"
+
+          rm -rf android-app
+
+          mkdir -p android-app
+          mkdir -p android-app/app/src/main/java/com/arabicalphabet/game
+          mkdir -p android-app/app/src/main/assets/game
+          mkdir -p android-app/app/src/main/res/values
+
+          cat > android-app/settings.gradle <<'EOF'
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "ArabicAlphabetGame"
+include(":app")
+EOF
+
+          cat > android-app/build.gradle <<'EOF'
+plugins {
+    id 'com.android.application' version '8.7.3' apply false
+}
+EOF
+
+          cat > android-app/gradle.properties <<'EOF'
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+EOF
+
+          cat > android-app/app/build.gradle <<'EOF'
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.arabicalphabet.game'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.arabicalphabet.game'
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+EOF
+
+          cat > android-app/app/proguard-rules.pro <<'EOF'
+EOF
+
+          cat > android-app/app/src/main/res/values/strings.xml <<'EOF'
+<resources>
+    <string name="app_name">Arabic Alphabet Game</string>
+</resources>
+EOF
+
+          cat > android-app/app/src/main/AndroidManifest.xml <<'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="true"
+        android:usesCleartextTraffic="true"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+    </application>
+
+</manifest>
+EOF
+
+          cat > android-app/app/src/main/res/values/styles.xml <<'EOF'
+<resources>
+
+    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:colorAccent">#6750A4</item>
+    </style>
+
+</resources>
+EOF
+
+          cat > android-app/app/src/main/java/com/arabicalphabet/game/MainActivity.java <<'EOF'
+package com.arabicalphabet.game;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+public class MainActivity extends Activity {
+
+    private WebView webView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        webView = new WebView(this);
+
+        WebSettings settings = webView.getSettings();
+
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
+
+        webView.setWebViewClient(new WebViewClient());
+
+        webView.loadUrl("file:///android_asset/game/index.html");
+
+        setContentView(webView);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
+    }
+}
+EOF
+
+      - name: Copy game files into Android assets
+        shell: bash
+        run: |
+          set -e
 
           GAME_DIR=$(dirname "$HTML_FILE")
 
-          cp -r "$GAME_DIR"/. android/app/src/main/assets/
+          echo "Game directory:"
+          echo "$GAME_DIR"
 
-          cat > android/settings.gradle <<'EOF'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
+          rm -rf "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game"
 
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
+          mkdir -p "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game"
 
-          rootProject.name = "ArabicAlphabetGame"
-          include ":app"
-          EOF
+          cp -R "$GAME_DIR"/. \
+            "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game/"
 
-          cat > android/build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application' version '8.7.3' apply false
-          }
-          EOF
+          if [ ! -f "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game/index.html" ]; then
+            cp "$HTML_FILE" \
+              "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game/index.html"
+          fi
 
-          cat > android/app/build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application'
-          }
+          echo "Game files copied successfully."
 
-          android {
-              namespace 'com.yarub.arabicalphabet'
-              compileSdk 35
+          echo "Files inside assets:"
+          find "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game" -maxdepth 2 -type f
 
-              defaultConfig {
-                  applicationId 'com.yarub.arabicalphabet'
-                  minSdk 23
-                  targetSdk 35
-                  versionCode 1
-                  versionName '1.0'
-              }
-          }
-          EOF
+      - name: Build APK
+        shell: bash
+        run: |
+          set -e
 
-          cat > android/app/src/main/res/values/strings.xml <<'EOF'
-          <resources>
-              <string name="app_name">Arabic Alphabet Game</string>
-          </resources>
-          EOF
+          cd "$GITHUB_WORKSPACE/android-app"
 
-          cat > android/app/src/main/res/values/styles.xml <<'EOF'
-          <resources>
-              <style name="AppTheme"
-                  parent="android:style/Theme.Material.Light.NoActionBar">
-                  <item name="android:fontFamily">sans</item>
-                  <item name="android:windowActionModeOverlay">true</item>
-                  <item name="android:colorAccent">#7B4DFF</item>
-              </style>
-          </resources>
-          EOF
+          gradle :app:assembleDebug --no-daemon --stacktrace
 
-          cat > android/app/src/main/AndroidManifest.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
+      - name: Verify APK exists
+        shell: bash
+        run: |
+          set -e
 
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          APK_FILE=$(find "$GITHUB_WORKSPACE/android-app/app/build/outputs/apk/debug" \
+            -type f -name "*.apk" | head -n 1)
 
-              <uses
+          if [ -z "$APK_FILE" ]; then
+            echo "ERROR: APK was not created."
+            exit 1
+          fi
+
+          echo "APK successfully created:"
+          echo "$APK_FILE"
+
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+
+          cp "$APK_FILE" \
+            "$GITHUB_WORKSPACE/artifacts/Arabic-Alphabet-Game.apk"
+
+          ls -lh "$GITHUB_WORKSPACE/artifacts/Arabic-Alphabet-Game.apk"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Arabic-Alphabet-Game-APK
+          path: artifacts/Arabic-Alphabet-Game.apk
+          if-no-files-found: error
