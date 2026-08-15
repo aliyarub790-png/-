@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v6
 
@@ -80,158 +79,156 @@ jobs:
           mkdir -p android-app/app/src/main/res/values
 
           cat > android-app/settings.gradle <<'EOF'
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
 
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
 
-rootProject.name = "ArabicAlphabetGame"
-include(":app")
-EOF
+          rootProject.name = "ArabicAlphabetGame"
+          include(":app")
+          EOF
 
           cat > android-app/build.gradle <<'EOF'
-plugins {
-    id 'com.android.application' version '8.7.3' apply false
-}
-EOF
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          EOF
 
           cat > android-app/gradle.properties <<'EOF'
-org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-android.useAndroidX=true
-android.nonTransitiveRClass=true
-EOF
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.nonTransitiveRClass=true
+          EOF
 
           cat > android-app/app/build.gradle <<'EOF'
-plugins {
-    id 'com.android.application'
-}
+          plugins {
+              id 'com.android.application'
+          }
 
-android {
-    namespace 'com.arabicalphabet.game'
-    compileSdk 35
+          android {
+              namespace 'com.arabicalphabet.game'
+              compileSdk 35
 
-    defaultConfig {
-        applicationId 'com.arabicalphabet.game'
-        minSdk 23
-        targetSdk 35
-        versionCode 1
-        versionName '1.0'
-    }
+              defaultConfig {
+                  applicationId 'com.arabicalphabet.game'
+                  minSdk 23
+                  targetSdk 35
+                  versionCode 1
+                  versionName '1.0'
+              }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            shrinkResources false
-        }
-    }
-}
-EOF
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+              }
+          }
+          EOF
 
           cat > android-app/app/proguard-rules.pro <<'EOF'
-EOF
+          EOF
 
           cat > android-app/app/src/main/res/values/strings.xml <<'EOF'
-<resources>
-    <string name="app_name">Arabic Alphabet Game</string>
-</resources>
-EOF
+          <resources>
+              <string name="app_name">Arabic Alphabet Game</string>
+          </resources>
+          EOF
 
           cat > android-app/app/src/main/res/values/styles.xml <<'EOF'
-<resources>
-
-    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#6750A4</item>
-    </style>
-
-</resources>
-EOF
+          <resources>
+              <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:colorAccent">#6750A4</item>
+              </style>
+          </resources>
+          EOF
 
           cat > android-app/app/src/main/AndroidManifest.xml <<'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.INTERNET" />
 
-    <application
-        android:allowBackup="true"
-        android:usesCleartextTraffic="true"
-        android:label="@string/app_name"
-        android:theme="@style/AppTheme">
+              <application
+                  android:allowBackup="true"
+                  android:usesCleartextTraffic="true"
+                  android:label="@string/app_name"
+                  android:theme="@style/AppTheme">
 
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
 
-        </activity>
+                  </activity>
 
-    </application>
+              </application>
 
-</manifest>
-EOF
+          </manifest>
+          EOF
 
           cat > android-app/app/src/main/java/com/arabicalphabet/game/MainActivity.java <<'EOF'
-package com.arabicalphabet.game;
+          package com.arabicalphabet.game;
 
-import android.app.Activity;
-import android.os.Bundle;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
 
-public class MainActivity extends Activity {
+          public class MainActivity extends Activity {
 
-    private WebView webView;
+              private WebView webView;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
 
-        webView = new WebView(this);
+                  webView = new WebView(this);
 
-        WebSettings settings = webView.getSettings();
+                  WebSettings settings = webView.getSettings();
 
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-        settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setAllowFileAccess(true);
+                  settings.setAllowContentAccess(true);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
 
-        webView.setWebViewClient(new WebViewClient());
+                  webView.setWebViewClient(new WebViewClient());
 
-        webView.loadUrl("file:///android_asset/game/index.html");
+                  webView.loadUrl("file:///android_asset/game/index.html");
 
-        setContentView(webView);
-    }
+                  setContentView(webView);
+              }
 
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
-    }
-}
-EOF
+              @Override
+              public void onBackPressed() {
+                  if (webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          EOF
 
       - name: Copy game files
         shell: bash
@@ -254,7 +251,7 @@ EOF
               "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game/index.html"
           fi
 
-          echo "Game files copied."
+          echo "Game files copied successfully."
 
           find "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game" \
             -maxdepth 3 -type f
@@ -283,7 +280,8 @@ EOF
             exit 1
           fi
 
-          echo "APK created:"
+          echo "APK created successfully:"
+
           echo "$APK_FILE"
 
           mkdir -p "$GITHUB_WORKSPACE/artifacts"
@@ -291,10 +289,11 @@ EOF
           cp "$APK_FILE" \
             "$GITHUB_WORKSPACE/artifacts/Arabic-Alphabet-Game.apk"
 
-          ls -lh "$GITHUB_WORKSPACE/artifacts/Arabic-Alphabet-Game.apk"
+          ls -lh \
+            "$GITHUB_WORKSPACE/artifacts/Arabic-Alphabet-Game.apk"
 
       - name: Upload APK
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: Arabic-Alphabet-Game-APK
           path: artifacts/Arabic-Alphabet-Game.apk
