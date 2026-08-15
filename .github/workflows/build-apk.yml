@@ -3,13 +3,15 @@ name: Build Arabic Alphabet Game APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -45,23 +47,18 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.7'
+          gradle-version: "8.9"
 
       - name: Create Android project
         run: |
           mkdir -p android/app/src/main/java/com/yarub/arabicalphabet
           mkdir -p android/app/src/main/assets
           mkdir -p android/app/src/main/res/values
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
 
           GAME_DIR=$(dirname "$HTML_FILE")
 
@@ -119,4 +116,20 @@ jobs:
           </resources>
           EOF
 
-         
+          cat > android/app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+              <style name="AppTheme"
+                  parent="android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+                  <item name="android:colorAccent">#7B4DFF</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > android/app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses
