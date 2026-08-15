@@ -27,7 +27,7 @@ jobs:
             exit 1
           fi
 
-          echo "Using ZIP: $ZIP_FILE"
+          echo "ZIP found: $ZIP_FILE"
 
           mkdir -p "$GITHUB_WORKSPACE/game-source"
 
@@ -40,15 +40,18 @@ jobs:
         run: |
           set -e
 
-          HTML_FILE=$(find "$GITHUB_WORKSPACE/game-source" -type f \( -iname "index.html" -o -iname "*.html" \) | head -n 1)
+          HTML_FILE=$(find "$GITHUB_WORKSPACE/game-source" -type f -iname "index.html" | head -n 1)
 
           if [ -z "$HTML_FILE" ]; then
-            echo "ERROR: No HTML file found inside ZIP."
+            HTML_FILE=$(find "$GITHUB_WORKSPACE/game-source" -type f -iname "*.html" | head -n 1)
+          fi
+
+          if [ -z "$HTML_FILE" ]; then
+            echo "ERROR: No HTML file found."
             exit 1
           fi
 
-          echo "HTML file found:"
-          echo "$HTML_FILE"
+          echo "HTML found: $HTML_FILE"
 
           echo "HTML_FILE=$HTML_FILE" >> "$GITHUB_ENV"
 
@@ -56,12 +59,12 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: '8.9'
+          gradle-version: "8.9"
 
       - name: Create Android project
         shell: bash
@@ -72,7 +75,6 @@ jobs:
 
           rm -rf android-app
 
-          mkdir -p android-app
           mkdir -p android-app/app/src/main/java/com/arabicalphabet/game
           mkdir -p android-app/app/src/main/assets/game
           mkdir -p android-app/app/src/main/res/values
@@ -132,11 +134,9 @@ android {
         release {
             minifyEnabled false
             shrinkResources false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
-
 EOF
 
           cat > android-app/app/proguard-rules.pro <<'EOF'
@@ -145,6 +145,17 @@ EOF
           cat > android-app/app/src/main/res/values/strings.xml <<'EOF'
 <resources>
     <string name="app_name">Arabic Alphabet Game</string>
+</resources>
+EOF
+
+          cat > android-app/app/src/main/res/values/styles.xml <<'EOF'
+<resources>
+
+    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#6750A4</item>
+    </style>
+
 </resources>
 EOF
 
@@ -174,18 +185,6 @@ EOF
     </application>
 
 </manifest>
-EOF
-
-          cat > android-app/app/src/main/res/values/styles.xml <<'EOF'
-<resources>
-
-    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:fontFamily">sans</item>
-        <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:colorAccent">#6750A4</item>
-    </style>
-
-</resources>
 EOF
 
           cat > android-app/app/src/main/java/com/arabicalphabet/game/MainActivity.java <<'EOF'
@@ -234,15 +233,14 @@ public class MainActivity extends Activity {
 }
 EOF
 
-      - name: Copy game files into Android assets
+      - name: Copy game files
         shell: bash
         run: |
           set -e
 
           GAME_DIR=$(dirname "$HTML_FILE")
 
-          echo "Game directory:"
-          echo "$GAME_DIR"
+          echo "Game directory: $GAME_DIR"
 
           rm -rf "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game"
 
@@ -256,12 +254,12 @@ EOF
               "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game/index.html"
           fi
 
-          echo "Game files copied successfully."
+          echo "Game files copied."
 
-          echo "Files inside assets:"
-          find "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game" -maxdepth 2 -type f
+          find "$GITHUB_WORKSPACE/android-app/app/src/main/assets/game" \
+            -maxdepth 3 -type f
 
-      - name: Build APK
+      - name: Build Debug APK
         shell: bash
         run: |
           set -e
@@ -270,20 +268,22 @@ EOF
 
           gradle :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Verify APK exists
+      - name: Find APK
         shell: bash
         run: |
           set -e
 
-          APK_FILE=$(find "$GITHUB_WORKSPACE/android-app/app/build/outputs/apk/debug" \
-            -type f -name "*.apk" | head -n 1)
+          APK_FILE=$(find \
+            "$GITHUB_WORKSPACE/android-app/app/build/outputs/apk/debug" \
+            -type f \
+            -name "*.apk" | head -n 1)
 
           if [ -z "$APK_FILE" ]; then
             echo "ERROR: APK was not created."
             exit 1
           fi
 
-          echo "APK successfully created:"
+          echo "APK created:"
           echo "$APK_FILE"
 
           mkdir -p "$GITHUB_WORKSPACE/artifacts"
@@ -293,7 +293,7 @@ EOF
 
           ls -lh "$GITHUB_WORKSPACE/artifacts/Arabic-Alphabet-Game.apk"
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
           name: Arabic-Alphabet-Game-APK
