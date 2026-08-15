@@ -3,51 +3,47 @@ name: Build Arabic Alphabet Game APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Prepare Android project
-        shell: bash
+      - name: Create Android project
         run: |
-          set -e
+          mkdir -p android/app/src/main/java/com/yarub/game
+          mkdir -p android/app/src/main/res/values
+          mkdir -p android/app/src/main/assets
 
-          rm -rf android-project extracted-game
-          mkdir -p android-project/app/src/main/java/com/yarub/game
-          mkdir -p android-project/app/src/main/assets
+          unzip -q arabic-alphabet-game.zip -d game
 
-          unzip -q "arabic-alphabet-game.zip" -d extracted-game
-
-          HTML_FILE=$(find extracted-game -type f \( -iname "index.html" -o -iname "*.html" \) | head -n 1)
+          HTML_FILE=$(find game -type f -iname "index.html" | head -n 1)
 
           if [ -z "$HTML_FILE" ]; then
-            echo "ERROR: No HTML file found inside arabic-alphabet-game.zip"
+            echo "index.html not found"
             exit 1
           fi
 
-          echo "HTML found: $HTML_FILE"
-
           GAME_DIR=$(dirname "$HTML_FILE")
-          cp -R "$GAME_DIR"/. android-project/app/src/main/assets/
+          cp -r "$GAME_DIR"/. android/app/src/main/assets/
 
-          cat > android-project/settings.gradle <<'EOF'
+          cat > settings.gradle <<'EOF'
 pluginManagement {
     repositories {
         google()
@@ -65,16 +61,16 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "ArabicAlphabetGame"
-include(":app")
+include ":app"
 EOF
 
-          cat > android-project/build.gradle <<'EOF'
+          cat > build.gradle <<'EOF'
 plugins {
     id 'com.android.application' version '8.7.3' apply false
 }
 EOF
 
-          cat > android-project/app/build.gradle <<'EOF'
+          cat > android/build.gradle <<'EOF'
 plugins {
     id 'com.android.application'
 }
@@ -91,102 +87,25 @@ android {
         versionName '1.0'
     }
 }
-
-dependencies {
-}
 EOF
 
-          cat > android-project/app/src/main/AndroidManifest.xml <<'EOF'
+          cat > android/src_dummy.txt <<'EOF'
+EOF
+
+          cat > android/app/src/main/res/values/styles.xml <<'EOF'
+<resources>
+    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#6750A4</item>
+    </style>
+</resources>
+EOF
+
+          cat > android/app/src/main/AndroidManifest.xml <<'EOF'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:theme="@style/AppTheme"
-        android:label="Arabic Alphabet Game"
-        android:usesCleartextTraffic="true"
-        android:hardwareAccelerated="true">
-
-        <activity
-            android:name=".MainActivity"
-            android:screenOrientation="portrait"
-            android:exported="true">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-        </activity>
-
-    </application>
-
-</manifest>
-EOF
-
-          mkdir -p android-project/app/src/main/res/values
-
-          cat > android-project/app/src/main/res/values/styles.xml <<'EOF'
-<resources>
-    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#6750A4</item>
-        <item name="android:windowFullscreen">false</item>
-    </style>
-</resources>
-EOF
-
-          cat > android-project/app/src/main/java/com/yarub/game/MainActivity.java <<'EOF'
-package com.yarub.game;
-
-import android.app.Activity;
-import android.os.Bundle;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-
-public class MainActivity extends Activity {
-
-    private WebView webView;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        webView = new WebView(this);
-        setContentView(webView);
-
-        WebSettings settings = webView.getSettings();
-
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-        settings.setDatabaseEnabled(true);
-        settings.setMediaPlaybackRequiresUserGesture(false);
-
-        webView.setWebViewClient(new WebViewClient());
-
-        webView.loadUrl("file:///android_asset/index.html");
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
-    }
-}
-EOF
-
-      - name: Build APK
-        working-directory: android-project
-        run: gradle assembleDebug --no-daemon
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: arabic-alphabet-game-apk
-          path: android-project/app/build/outputs/apk/debug/app-debug.apk
+        android:label="
